@@ -4,6 +4,7 @@ import com.bookit.pages.SelfPage;
 import com.bookit.pages.SignInPage;
 import com.bookit.utilities.ConfigurationReader;
 import com.bookit.utilities.DBUtils;
+import io.cucumber.java.en.And;
 import io.cucumber.java.en.Given;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
@@ -23,6 +24,7 @@ public class ApiStepDefs {
     String token;
     Response response;
     String emailGlobal;
+    int idToDelete;
 
     @Given("I logged Bookit api using {string} and {string}")
     public void i_logged_Bookit_api_using_and(String email, String password) {
@@ -51,7 +53,7 @@ public class ApiStepDefs {
         //get information from database
         String query = "SELECT firstname,lastname,role\n" +
                 "FROM users\n" +
-                "WHERE email = '"+emailGlobal+"'";
+                "WHERE email = '" + emailGlobal + "'";
 
         Map<String, Object> dbMap = DBUtils.getRowMap(query);
         System.out.println(dbMap);
@@ -83,7 +85,7 @@ public class ApiStepDefs {
         //get information from database
         String query = "SELECT firstname,lastname,role\n" +
                 "FROM users\n" +
-                "WHERE email = '"+emailGlobal+"'";
+                "WHERE email = '" + emailGlobal + "'";
 
         Map<String, Object> dbMap = DBUtils.getRowMap(query);
         System.out.println(dbMap);
@@ -112,15 +114,45 @@ public class ApiStepDefs {
         String actualRoleUI = selfPage.role.getText();
 
         //UI vs DB
-        String expectedFullName = expectedFirstName+" "+expectedLastName;
-        Assert.assertEquals(expectedFullName,actualFullNameUI);
-        Assert.assertEquals(expectedRole,actualRoleUI);
+        String expectedFullName = expectedFirstName + " " + expectedLastName;
+        Assert.assertEquals(expectedFullName, actualFullNameUI);
+        Assert.assertEquals(expectedRole, actualRoleUI);
 
         //UI vs API
         //create one api fullname variable
-        String actualFullName = actualFirstName+" "+actualLastName;
+        String actualFullName = actualFirstName + " " + actualLastName;
 
-        Assert.assertEquals(actualFullName,actualFullNameUI);
-        Assert.assertEquals(actualRole,actualRoleUI);
+        Assert.assertEquals(actualFullName, actualFullNameUI);
+        Assert.assertEquals(actualRole, actualRoleUI);
+    }
+
+    @When("I send POST request {string} endpoint with following information")
+    public void i_send_POST_request_endpoint_with_following_information(String path, Map<String, String> userInfo) {
+        System.out.println(userInfo);
+
+        response = given()
+                .accept(ContentType.JSON)
+                .and()
+                .header("Authorization", token)
+                .queryParams(userInfo)
+                .log().all()
+                .when().post(ConfigurationReader.get("base_url") + path)
+                .then().log().all().extract().response();
+
+        idToDelete = response.path("entryId");
+
+    }
+
+
+    @And("I delete previously added student")
+    public void iDeletePreviouslyAddedStudent() {
+        //we need id from previous post request
+
+        given()
+                .header("Authorization", token)
+                .pathParam("id",idToDelete)
+                .when().delete(ConfigurationReader.get("base_url")+"/api/students/{id}")
+                .then().statusCode(204);
+
     }
 }
