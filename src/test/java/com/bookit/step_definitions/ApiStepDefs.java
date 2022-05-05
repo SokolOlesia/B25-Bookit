@@ -2,6 +2,7 @@ package com.bookit.step_definitions;
 
 import com.bookit.pages.SelfPage;
 import com.bookit.pages.SignInPage;
+import com.bookit.utilities.BookitUtils;
 import com.bookit.utilities.ConfigurationReader;
 import com.bookit.utilities.DBUtils;
 import io.cucumber.java.en.And;
@@ -21,6 +22,7 @@ import static io.restassured.RestAssured.*;
 import static org.junit.Assert.assertEquals;
 
 public class ApiStepDefs {
+
     String token;
     Response response;
     String emailGlobal;
@@ -29,31 +31,40 @@ public class ApiStepDefs {
     @Given("I logged Bookit api using {string} and {string}")
     public void i_logged_Bookit_api_using_and(String email, String password) {
 
-        token = generateToken(email, password);
+
+        token = BookitUtils.generateToken(email,password);
         emailGlobal = email;
     }
 
     @When("I get the current user information from api")
     public void i_get_the_current_user_information_from_api() {
+
         response = given().accept(ContentType.JSON)
                 .and()
                 .header("Authorization", token)
                 .when().get(ConfigurationReader.get("base_url") + "/api/users/me");
+
         response.prettyPrint();
+
     }
 
     @Then("status code should be {int}")
-    public void status_code_should_be(int expectedStatusCode) {
+    public void status_code_should_be(int statusCode) {
+
+        //get the status code from global response, which is stored from previous request
+        //and verify if it matches with the status code from feature file
         System.out.println(response.statusCode());
-        assertEquals(expectedStatusCode, response.statusCode());
+        Assert.assertEquals(statusCode,response.statusCode());
+
     }
 
     @Then("the information about current user from api and database should match")
     public void the_information_about_current_user_from_api_and_database_should_match() {
+
         //get information from database
-        String query = "SELECT firstname,lastname,role\n" +
+        String query ="SELECT firstname,lastname,role\n" +
                 "FROM users\n" +
-                "WHERE email = '" + emailGlobal + "'";
+                "WHERE email = '"+emailGlobal+"'";
 
         Map<String, Object> dbMap = DBUtils.getRowMap(query);
         System.out.println(dbMap);
@@ -61,7 +72,7 @@ public class ApiStepDefs {
         //save database information into expected variables
         String expectedFirstName = (String) dbMap.get("firstname");
         String expectedLastName = (String) dbMap.get("lastname");
-        String expectedRole = (String) dbMap.get("role");
+        String expectedRole= (String) dbMap.get("role");
 
 
         //get information from api
@@ -73,19 +84,20 @@ public class ApiStepDefs {
 
         //compare database vs api
 
-        assertEquals(expectedFirstName, actualFirstName);
-        assertEquals(expectedLastName, actualLastName);
-        assertEquals(expectedRole, actualRole);
+        Assert.assertEquals(expectedFirstName,actualFirstName);
+        Assert.assertEquals(expectedLastName,actualLastName);
+        Assert.assertEquals(expectedRole,actualRole);
 
 
     }
 
+
     @Then("UI,API and Database user information must be match")
-    public void ui_API_and_Database_user_information_must_be_match() {
+    public void uiAPIAndDatabaseUserInformationMustBeMatch() {
         //get information from database
-        String query = "SELECT firstname,lastname,role\n" +
+        String query ="SELECT firstname,lastname,role\n" +
                 "FROM users\n" +
-                "WHERE email = '" + emailGlobal + "'";
+                "WHERE email = '"+emailGlobal+"'";
 
         Map<String, Object> dbMap = DBUtils.getRowMap(query);
         System.out.println(dbMap);
@@ -93,7 +105,7 @@ public class ApiStepDefs {
         //save database information into expected variables
         String expectedFirstName = (String) dbMap.get("firstname");
         String expectedLastName = (String) dbMap.get("lastname");
-        String expectedRole = (String) dbMap.get("role");
+        String expectedRole= (String) dbMap.get("role");
 
 
         //get information from api
@@ -105,44 +117,50 @@ public class ApiStepDefs {
 
         //compare database vs api
 
-        assertEquals(expectedFirstName, actualFirstName);
-        assertEquals(expectedLastName, actualLastName);
-        assertEquals(expectedRole, actualRole);
+        Assert.assertEquals(expectedFirstName,actualFirstName);
+        Assert.assertEquals(expectedLastName,actualLastName);
+        Assert.assertEquals(expectedRole,actualRole);
 
+        //getting information from UI
         SelfPage selfPage = new SelfPage();
         String actualFullNameUI = selfPage.name.getText();
         String actualRoleUI = selfPage.role.getText();
 
+        System.out.println("actualFullNameUI = " + actualFullNameUI);
+        System.out.println("actualRoleUI = " + actualRoleUI);
+
         //UI vs DB
-        String expectedFullName = expectedFirstName + " " + expectedLastName;
-        Assert.assertEquals(expectedFullName, actualFullNameUI);
-        Assert.assertEquals(expectedRole, actualRoleUI);
+        String expectedFullName = expectedFirstName+" "+expectedLastName;
+        Assert.assertEquals(expectedFullName,actualFullNameUI);
+        Assert.assertEquals(expectedRole,actualRoleUI);
 
         //UI vs API
         //create one api fullname variable
-        String actualFullName = actualFirstName + " " + actualLastName;
+        String actualFullName = actualFirstName+" "+actualLastName;
 
-        Assert.assertEquals(actualFullName, actualFullNameUI);
-        Assert.assertEquals(actualRole, actualRoleUI);
+        Assert.assertEquals(actualFullName,actualFullNameUI);
+        Assert.assertEquals(actualRole,actualRoleUI);
+
+
     }
 
+
     @When("I send POST request {string} endpoint with following information")
-    public void i_send_POST_request_endpoint_with_following_information(String path, Map<String, String> userInfo) {
+    public void i_send_POST_request_endpoint_with_following_information(String path, Map<String,String> userInfo) {
         System.out.println(userInfo);
 
-        response = given()
+        response =  given()
                 .accept(ContentType.JSON)
                 .and()
                 .header("Authorization", token)
                 .queryParams(userInfo)
                 .log().all()
-                .when().post(ConfigurationReader.get("base_url") + path)
+                .when().post(ConfigurationReader.get("base_url")+path)
                 .then().log().all().extract().response();
 
-        idToDelete = response.path("entryId");
+        idToDelete = response.path("entryiId");
 
     }
-
 
     @And("I delete previously added student")
     public void iDeletePreviouslyAddedStudent() {
